@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Word Deck</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main>
+      <h1>Word Deck</h1>
+      <p>Generate a deterministic, printable story-word deck entirely in your browser.</p>
+      <form id="generator">
+        <label>Corpus <select name="corpus"><option value="asimov">Asimov magazine OCR</option><option value="fiction-xlsx">Fiction frequency dataset</option></select></label>
+        <label>Word cards <input name="count" type="number" min="100" value="2800"></label>
+        <label>Palette types <input name="paletteSize" type="number" min="50" value="700"></label>
+        <label>Required common words <input name="requiredHead" type="number" min="0" value="200"></label>
+        <label>Seed <input name="seed" type="number" value="20260717"></label>
+        <label>Export <select name="format"><option value="pdf">PDF via Typst</option><option value="html">Printable HTML</option><option value="typst">Typst source</option><option value="txt">Plain text</option></select></label>
+        <button type="submit">Generate download</button>
+      </form>
+      <output id="status" aria-live="polite">Loading word-deck WASM…</output>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
