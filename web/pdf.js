@@ -3,6 +3,7 @@ export async function compilePdf(typst, compiler) {
     const pdf = await compiler(typst);
     return { ok: true, content: pdf, message: "Generated PDF with Typst WASM." };
   } catch (error) {
-    return { ok: false, message: `Typst PDF compiler was unavailable: ${error.message}` };
+    const detail = error instanceof Error ? error.message : String(error);
+    return { ok: false, message: `Typst PDF compiler was unavailable: ${detail}` };
   }
 }

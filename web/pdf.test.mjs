@@ -21,3 +21,10 @@ test("returns the generated PDF for preview and later download", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.content, pdf);
 });
+
+test("turns a non-Error compiler rejection into a useful message", async () => {
+  const result = await compilePdf("#set text[words]", async () => Promise.reject("bad compiler state"));
+
+  assert.equal(result.ok, false);
+  assert.match(result.message, /bad compiler state/);
+});

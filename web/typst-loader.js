@@ -9,7 +9,7 @@ export async function compileWithTypst(source) {
   await document.fonts.ready;
   $typst.setCompilerInitOptions({
     getWrapper: () => Promise.resolve(compilerWrapper),
-    getModule: () => compilerWasm,
+    getModule: () => ({ module_or_path: compilerWasm }),
   });
   return $typst.pdf({ mainContent: source });
 }
