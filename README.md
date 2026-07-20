@@ -13,7 +13,7 @@ The application is deliberately built around word-frequency data, not source pro
 
 ## Typefaces
 
-The searchable picker previews 29 typefaces, including Libertinus Serif and a broad range of Google Fonts. The same selected font is fetched for PDF generation, so the PDF and printable HTML are laid out with that typeface rather than a substitute. Generating a PDF with a Google Font therefore needs an internet connection the first time that font is used.
+The searchable picker previews 24 typefaces, including Libertinus Serif and a deliberately varied range of Google Fonts. The same selected font is fetched for PDF generation, so the PDF and printable HTML are laid out with that typeface rather than a substitute. Generating a PDF with a Google Font therefore needs an internet connection the first time that font is used.
 
 ## Optional word pieces
 

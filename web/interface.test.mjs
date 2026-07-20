@@ -17,7 +17,8 @@ test("the generator form uses clear labels and exposes layout spacing", async ()
   assert.match(page, /name="fontFamily"/);
   assert.match(page, /Search typefaces/);
   assert.match(fonts, /id: "literata"/);
-  assert.match(fonts, /id: "merriweather"/);
+  assert.match(fonts, /id: "uncial-antiqua"/);
+  assert.match(fonts, /id: "press-start-2p"/);
   assert.match(page, /name="rowSpacing"/);
   assert.match(page, /name="columnSpacing"/);
   assert.match(page, /PDF<\/option>/);
