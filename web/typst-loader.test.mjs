@@ -7,5 +7,7 @@ test("uses bundled Typst modules rather than runtime CDN imports", async () => {
 
   assert.match(source, /from "@myriaddreamin\/typst\.ts"/);
   assert.match(source, /module_or_path: compilerWasm/);
+  assert.match(source, /let compilerConfigured = false/);
+  assert.match(source, /if \(!compilerConfigured\)/);
   assert.doesNotMatch(source, /https:\/\/(unpkg|esm\.sh)/);
 });
