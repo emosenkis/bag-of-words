@@ -10,6 +10,7 @@ export function typstAssets() {
 
 export function typstImportMap() {
   return {
+    "@myriaddreamin/typst.ts/contrib/global-compiler": "https://unpkg.com/@myriaddreamin/typst.ts@0.7.0/dist/esm/contrib/global-compiler.mjs",
     "@myriaddreamin/typst.ts/": "https://unpkg.com/@myriaddreamin/typst.ts@0.7.0/dist/esm/",
     "@myriaddreamin/typst-ts-web-compiler": assets.compiler,
   };

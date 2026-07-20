@@ -12,4 +12,8 @@ test("pins browser-compatible Typst JavaScript and WASM assets", () => {
     typstImportMap()["@myriaddreamin/typst.ts/"],
     "https://unpkg.com/@myriaddreamin/typst.ts@0.7.0/dist/esm/",
   );
+  assert.equal(
+    typstImportMap()["@myriaddreamin/typst.ts/contrib/global-compiler"],
+    "https://unpkg.com/@myriaddreamin/typst.ts@0.7.0/dist/esm/contrib/global-compiler.mjs",
+  );
 });
