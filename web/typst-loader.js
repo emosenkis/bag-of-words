@@ -8,7 +8,18 @@ export function typstAssets() {
   return assets;
 }
 
+export function typstImportMap() {
+  return {
+    "@myriaddreamin/typst.ts/": "https://unpkg.com/@myriaddreamin/typst.ts@0.7.0/dist/esm/",
+    "@myriaddreamin/typst-ts-web-compiler": assets.compiler,
+  };
+}
+
 export async function compileWithTypst(source) {
+  if (document.readyState !== "complete") {
+    await new Promise((resolve) => window.addEventListener("load", resolve, { once: true }));
+  }
+  await document.fonts.ready;
   const { $typst } = await import(assets.module);
   $typst.setCompilerInitOptions({
     getWrapper: () => import(assets.compiler),
