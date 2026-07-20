@@ -1,0 +1,16 @@
+{
+  "name": "word-deck-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@myriaddreamin/typst-ts-renderer": "0.7.0",
+    "@myriaddreamin/typst-ts-web-compiler": "0.7.0",
+    "@myriaddreamin/typst.ts": "0.7.0"
+  },
+  "devDependencies": {
+    "vite": "8.1.5"
+  }
+}

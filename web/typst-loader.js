@@ -1,30 +1,15 @@
-const assets = Object.freeze({
-  module: "https://unpkg.com/@myriaddreamin/typst.ts@0.7.0/dist/esm/index.mjs",
-  compiler: "https://unpkg.com/@myriaddreamin/typst-ts-web-compiler@0.7.0/pkg/wasm-pack-shim.mjs",
-  wasm: "https://unpkg.com/@myriaddreamin/typst-ts-web-compiler@0.7.0/pkg/typst_ts_web_compiler_bg.wasm",
-});
-
-export function typstAssets() {
-  return assets;
-}
-
-export function typstImportMap() {
-  return {
-    "@myriaddreamin/typst.ts/contrib/global-compiler": "https://unpkg.com/@myriaddreamin/typst.ts@0.7.0/dist/esm/contrib/global-compiler.mjs",
-    "@myriaddreamin/typst.ts/": "https://unpkg.com/@myriaddreamin/typst.ts@0.7.0/dist/esm/",
-    "@myriaddreamin/typst-ts-web-compiler": assets.compiler,
-  };
-}
+import { $typst } from "@myriaddreamin/typst.ts";
+import * as compilerWrapper from "@myriaddreamin/typst-ts-web-compiler";
+import compilerWasm from "@myriaddreamin/typst-ts-web-compiler/wasm?url";
 
 export async function compileWithTypst(source) {
   if (document.readyState !== "complete") {
     await new Promise((resolve) => window.addEventListener("load", resolve, { once: true }));
   }
   await document.fonts.ready;
-  const { $typst } = await import(assets.module);
   $typst.setCompilerInitOptions({
-    getWrapper: () => import(assets.compiler),
-    getModule: () => assets.wasm,
+    getWrapper: () => Promise.resolve(compilerWrapper),
+    getModule: () => compilerWasm,
   });
   return $typst.pdf({ mainContent: source });
 }

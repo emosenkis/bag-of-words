@@ -10,10 +10,12 @@ No source prose is embedded in this repository.
 ## Build
 
 ```bash
+npm ci
 cargo test
 cargo build --target wasm32-unknown-unknown --release
 wasm-bindgen --target web --out-dir web/pkg target/wasm32-unknown-unknown/release/word_deck.wasm
-python3 -m http.server --directory web 8000
+npm run build
+python3 -m http.server --directory web/dist 8000
 ```
 
 Open `http://localhost:8000`. Choose the corpus, deck parameters, paper size (Letter, A3, A4, or A5), orientation, and an export. TXT, HTML, and Typst source download directly. The HTML export measures the selected browser font and packs sorted cards into full-height, width-fitting columns. PDF uses the Typst.ts browser/WASM compiler; a compiler failure is reported without downloading a different format.

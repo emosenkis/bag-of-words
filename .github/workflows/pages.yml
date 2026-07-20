@@ -24,16 +24,19 @@ jobs:
           targets: wasm32-unknown-unknown
       - name: Install matching wasm-bindgen CLI
         run: cargo install wasm-bindgen-cli --version 0.2.126 --locked
+      - name: Install web build dependencies
+        run: npm ci
       - name: Build browser bundle
         run: |
           cargo build --target wasm32-unknown-unknown --release
           wasm-bindgen --target web --out-dir web/pkg target/wasm32-unknown-unknown/release/word_deck.wasm
+          npm run build
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web
+          path: web/dist
 
   deploy:
     environment:
