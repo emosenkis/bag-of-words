@@ -1,4 +1,4 @@
-use word_deck::{render_html, render_html_for_page, render_text, render_typst};
+use word_deck::{render_html, render_html_for_page, render_text, render_typst_for_page};
 
 #[test]
 fn text_export_has_one_card_per_line() {
@@ -29,11 +29,13 @@ fn html_export_contains_a_measured_page_packer_for_the_selected_paper() {
 
 #[test]
 fn typst_export_escapes_quotes_and_uses_cutout_layout() {
-    let typst = render_typst(&["don't".into(), "say \"go\"".into()]);
+    let typst =
+        render_typst_for_page(&["don't".into(), "say \"go\"".into()], "a4", "portrait").unwrap();
 
     assert!(typst.contains("say \\\"go\\\""));
-    assert!(typst.contains("words.sorted(key: word => (measure(text(word)).width, word))"));
-    assert!(typst.contains("col * row_count + row"));
-    assert!(typst.contains("box[#sorted.at(index)]"));
-    assert!(typst.contains("stroke: none"));
+    assert!(typst.contains("sampled.sorted().sorted(key: word => measure(text(word)).width)"));
+    assert!(typst.contains("let rows-per-column = 35"));
+    assert!(typst.contains("let printable-width = 202mm"));
+    assert!(typst.contains("let render-page(columns)"));
+    assert!(typst.contains("pages.push(pagebreak())"));
 }

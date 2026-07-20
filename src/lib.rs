@@ -300,14 +300,70 @@ pub fn render_typst_for_page(
     orientation: &str,
 ) -> Result<String, String> {
     let (width_mm, height_mm, _) = page_spec(paper_size, orientation)?;
-    let words = cards
+    let sampled = cards
         .iter()
         .map(|card| format!("  \"{}\"", escape_typst(card)))
         .collect::<Vec<_>>()
         .join(",\n");
-    Ok(format!(
-        "#set page(width: {width_mm}mm, height: {height_mm}mm, margin: 4mm)\n#set text(size: 14pt)\n#let words = (\n{words},\n)\n#context {{\n  let sorted = words.sorted(key: word => (measure(text(word)).width, word))\n  let column_count = 8\n  let row_count = calc.ceil(sorted.len() / column_count)\n  let cells = range(0, row_count).map(row => range(0, column_count).map(col => {{\n    let index = col * row_count + row\n    if index < sorted.len() {{ box[#sorted.at(index)] }} else {{ none }}\n  }})).flatten()\n  table(\n    columns: column_count,\n    stroke: none,\n    inset: (x: 1.5mm, y: 2.4mm),\n    ..cells,\n  )\n}}\n"
-    ))
+    let printable_width = width_mm - 8.0;
+    Ok(
+        r##"#set page(width: __PAGE_WIDTH__mm, height: __PAGE_HEIGHT__mm, margin: 4mm)
+#set text(font: "Libertinus Serif", size: 14pt)
+#set par(leading: 0.5em)
+#set table(stroke: none, inset: (x: 1.5mm, y: 2.4mm), align: center + horizon)
+
+#let sampled = (
+__SAMPLED__,
+)
+#context {
+  let words = sampled.sorted().sorted(key: word => measure(text(word)).width)
+  let rows-per-column = 35
+  let cell-inset = 3mm
+  let printable-width = __PRINTABLE_WIDTH__mm
+  let column-width(column) = {
+    let widest = 0pt
+    for word in column { widest = calc.max(widest, measure(text(word)).width) }
+    widest + cell-inset
+  }
+  let render-page(columns) = {
+    let widths = columns.map(column-width)
+    let cells = ()
+    for row in range(rows-per-column) {
+      for column in columns {
+        let cell = if row < column.len() {[#box[#column.at(row)]]} else {[]}
+        cells.push(cell)
+      }
+    }
+    align(center)[#table(columns: widths, ..cells)]
+  }
+  let columns = ()
+  for index in range(calc.ceil(words.len() / rows-per-column)) {
+    let start = index * rows-per-column
+    columns.push(words.slice(start, calc.min(start + rows-per-column, words.len())))
+  }
+  let pages = ()
+  let page-columns = ()
+  let used-width = 0pt
+  for column in columns {
+    let width = column-width(column)
+    if page-columns.len() > 0 and used-width + width > printable-width {
+      pages.push(render-page(page-columns))
+      pages.push(pagebreak())
+      page-columns = ()
+      used-width = 0pt
+    }
+    page-columns.push(column)
+    used-width += width
+  }
+  if page-columns.len() > 0 { pages.push(render-page(page-columns)) }
+  pages.join()
+}
+"##
+        .replace("__PAGE_WIDTH__", &width_mm.to_string())
+        .replace("__PAGE_HEIGHT__", &height_mm.to_string())
+        .replace("__PRINTABLE_WIDTH__", &printable_width.to_string())
+        .replace("__SAMPLED__", &sampled),
+    )
 }
 
 fn page_spec(paper_size: &str, orientation: &str) -> Result<(f64, f64, &'static str), String> {
