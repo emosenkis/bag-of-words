@@ -8,26 +8,89 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    <main>
-      <h1>Word Deck</h1>
-      <p>Generate a deterministic, printable story-word deck entirely in your browser.</p>
-      <form id="generator">
-        <label>Corpus <select name="corpus"><option value="asimov">Asimov magazine OCR</option><option value="fiction-xlsx">Fiction frequency dataset</option></select></label>
-        <label>Word cards <input name="count" type="number" min="100" value="2800"></label>
-        <label>Palette types <input name="paletteSize" type="number" min="50" value="700"></label>
-        <label>Required common words <input name="requiredHead" type="number" min="0" value="200"></label>
-        <label>Seed <input name="seed" type="number" value="20260717"></label>
-        <label>Font size <input name="fontSize" type="number" min="6" max="36" step="0.5" value="14"></label>
-        <label>Paper <select name="paperSize"><option value="letter">Letter</option><option value="a3">A3</option><option value="a4" selected>A4</option><option value="a5">A5</option></select></label>
-        <label>Orientation <select name="orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></label>
-        <label>Export <select name="format"><option value="pdf">PDF via Typst</option><option value="html">Printable HTML</option><option value="typst">Typst source</option><option value="txt">Plain text</option></select></label>
-        <div class="actions">
-          <button id="generate" type="submit">Generate</button>
-          <button id="download" type="button" disabled>Download</button>
+    <main class="shell">
+      <header class="masthead">
+        <p class="eyebrow">A printable writing prompt tool</p>
+        <div class="masthead-copy">
+          <div>
+            <h1>Word Deck</h1>
+            <p>Build a deterministic deck of story-ready words, then print and cut it into cards.</p>
+          </div>
+          <a class="repository-link" href="https://github.com/emosenkis/bag-of-words">View on GitHub <span aria-hidden="true">↗</span></a>
         </div>
+      </header>
+      <form id="generator">
+        <fieldset class="form-section source-section">
+          <legend>Words</legend>
+          <div class="fields">
+            <label class="wide-field">Word frequency source
+              <select name="corpus"><option value="asimov">Asimov magazine frequency data</option><option value="fiction-xlsx">Fiction frequency dataset</option></select>
+              <small>The embedded frequency table used to choose words.</small>
+            </label>
+            <label>Total word cards
+              <input name="count" type="number" min="100" value="2800">
+              <small>Every printed card, including repeats.</small>
+            </label>
+            <label>Number of distinct words
+              <input name="paletteSize" type="number" min="50" value="700">
+              <small>How broad the word palette should be.</small>
+            </label>
+            <label>Guaranteed common words
+              <input name="requiredHead" type="number" min="0" value="200">
+              <small>Top-frequency words always included.</small>
+            </label>
+            <label>Random seed
+              <input name="seed" type="number" value="20260717">
+              <small>Reuse a seed to reproduce a deck.</small>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-section page-section">
+          <legend>Page and spacing</legend>
+          <div class="fields">
+            <label>Font size
+              <div class="unit-input"><input name="fontSize" type="number" min="6" max="36" step="0.5" value="14"><span>pt</span></div>
+              <small>Size of the words on each card.</small>
+            </label>
+            <label>Paper size
+              <select name="paperSize"><option value="letter">Letter</option><option value="a3">A3</option><option value="a4" selected>A4</option><option value="a5">A5</option></select>
+              <small>Finished sheet dimensions.</small>
+            </label>
+            <label>Page orientation
+              <select name="orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
+              <small>Direction of the finished sheet.</small>
+            </label>
+            <label>Row spacing
+              <div class="unit-input"><input name="rowSpacing" type="number" min="0" max="12" step="0.1" value="2.4"><span>mm</span></div>
+              <small>Vertical room around each card for cutting.</small>
+            </label>
+            <label>Column spacing
+              <div class="unit-input"><input name="columnSpacing" type="number" min="0" max="12" step="0.1" value="3"><span>mm</span></div>
+              <small>Horizontal room around each card for cutting.</small>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-section export-section">
+          <legend>Export</legend>
+          <div class="fields export-fields">
+            <label>Download format
+              <select name="format"><option value="pdf">PDF</option><option value="html">Printable HTML</option><option value="typst">Typst source</option><option value="txt">Plain text</option></select>
+              <small>PDF is compiled in your browser.</small>
+            </label>
+            <div class="actions">
+              <button id="generate" type="submit">Generate deck</button>
+              <button id="download" type="button" disabled>Download file</button>
+            </div>
+          </div>
+        </fieldset>
       </form>
-      <output id="status" aria-live="polite">Loading word-deck WASM…</output>
-      <iframe id="result" title="Generated word deck" hidden></iframe>
+      <section class="result-panel" aria-label="Generated deck">
+        <output id="status" aria-live="polite">Loading word-deck WASM…</output>
+        <iframe id="result" title="Generated word deck" hidden></iframe>
+      </section>
+      <footer>Runs locally in your browser. <a href="https://github.com/emosenkis/bag-of-words">Source code and documentation</a></footer>
     </main>
     <script type="module" src="app.js"></script>
   </body>

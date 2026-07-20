@@ -21,3 +21,14 @@ fn json_api_returns_the_requested_export() {
     assert_eq!(response.cards.len(), 40);
     assert!(response.content.lines().count() == 40);
 }
+
+#[test]
+fn json_api_passes_layout_spacing_to_typst() {
+    let response = generate_json(
+        r#"{"corpus":"asimov","count":40,"palette_size":20,"required_head":10,"seed":3,"font_size":15,"row_spacing":3,"column_spacing":4,"paper_size":"a4","orientation":"landscape","format":"typst"}"#,
+    )
+    .unwrap();
+
+    assert!(response.content.contains("inset: (x: 2mm, y: 3mm)"));
+    assert!(response.content.contains("let cell-inset = 4mm"));
+}

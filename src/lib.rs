@@ -80,6 +80,10 @@ struct GenerationRequest {
     seed: u64,
     #[serde(default = "default_font_size")]
     font_size: f64,
+    #[serde(default = "default_row_spacing")]
+    row_spacing: f64,
+    #[serde(default = "default_column_spacing")]
+    column_spacing: f64,
     #[serde(default = "default_paper_size")]
     paper_size: String,
     #[serde(default = "default_orientation")]
@@ -97,6 +101,14 @@ fn default_orientation() -> String {
 
 fn default_font_size() -> f64 {
     14.0
+}
+
+fn default_row_spacing() -> f64 {
+    2.4
+}
+
+fn default_column_spacing() -> f64 {
+    3.0
 }
 
 #[derive(Debug, Serialize)]
@@ -118,6 +130,8 @@ pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
     let request: GenerationRequest = serde_json::from_str(request_json)
         .map_err(|error| format!("invalid request JSON: {error}"))?;
     validate_font_size(request.font_size)?;
+    validate_spacing("row_spacing", request.row_spacing)?;
+    validate_spacing("column_spacing", request.column_spacing)?;
     let corpus = embedded_corpus(&request.corpus)?;
     let cards = generate_deck(
         &corpus,
@@ -130,17 +144,21 @@ pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
     )?;
     let content = match request.format.as_str() {
         "txt" => render_text(&cards),
-        "html" => render_html_for_page_with_font(
+        "html" => render_html_for_page_with_layout(
             &cards,
             &request.paper_size,
             &request.orientation,
             request.font_size,
+            request.row_spacing,
+            request.column_spacing,
         )?,
-        "typst" => render_typst_for_page_with_font(
+        "typst" => render_typst_for_page_with_layout(
             &cards,
             &request.paper_size,
             &request.orientation,
             request.font_size,
+            request.row_spacing,
+            request.column_spacing,
         )?,
         _ => return Err(format!("unknown export format: {}", request.format)),
     };
@@ -235,7 +253,7 @@ pub fn render_html_for_page(
     paper_size: &str,
     orientation: &str,
 ) -> Result<String, String> {
-    render_html_for_page_with_font(cards, paper_size, orientation, 14.0)
+    render_html_for_page_with_font(cards, paper_size, orientation, default_font_size())
 }
 
 pub fn render_html_for_page_with_font(
@@ -244,7 +262,27 @@ pub fn render_html_for_page_with_font(
     orientation: &str,
     font_size: f64,
 ) -> Result<String, String> {
+    render_html_for_page_with_layout(
+        cards,
+        paper_size,
+        orientation,
+        font_size,
+        default_row_spacing(),
+        default_column_spacing(),
+    )
+}
+
+pub fn render_html_for_page_with_layout(
+    cards: &[String],
+    paper_size: &str,
+    orientation: &str,
+    font_size: f64,
+    row_spacing: f64,
+    column_spacing: f64,
+) -> Result<String, String> {
     validate_font_size(font_size)?;
+    validate_spacing("row_spacing", row_spacing)?;
+    validate_spacing("column_spacing", column_spacing)?;
     let (width_mm, height_mm, css_paper) = page_spec(paper_size, orientation)?;
     let cards_json = serde_json::to_string(cards)
         .map_err(|error| format!("could not serialize cards for HTML: {error}"))?
@@ -255,13 +293,13 @@ pub fn render_html_for_page_with_font(
 html, body { margin: 0; padding: 0; }
 body { font: __FONT_SIZE__pt sans-serif; }
 #deck { display: block; }
-.page { box-sizing: border-box; display: flex; gap: 3mm; overflow: hidden; page-break-after: always; break-after: page; }
+.page { box-sizing: border-box; display: flex; gap: __COLUMN_SPACING__mm; overflow: hidden; page-break-after: always; break-after: page; }
 .column { box-sizing: border-box; flex: none; }
-.card { display: block; line-height: 1.5; text-align: center; white-space: nowrap; }
+.card { display: block; margin-bottom: __ROW_SPACING__mm; line-height: 1.5; text-align: center; white-space: nowrap; }
 @media screen { body { background: #eee; } .page { background: white; margin: 8mm auto; } }
 </style></head><body><main id="deck"></main><script>
 const cards = __CARDS__;
-const page = { widthMm: __WIDTH__, heightMm: __HEIGHT__, marginMm: 4, gapMm: 3 };
+const page = { widthMm: __WIDTH__, heightMm: __HEIGHT__, marginMm: 4, rowSpacingMm: __ROW_SPACING__, columnSpacingMm: __COLUMN_SPACING__ };
 const deck = document.querySelector("#deck");
 
 function buildLayout() {
@@ -271,11 +309,11 @@ function buildLayout() {
   const style = getComputedStyle(document.body);
   context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
   const pxPerMm = 96 / 25.4;
-  const lineHeight = parseFloat(style.fontSize) * 1.5;
+  const lineHeight = parseFloat(style.fontSize) * 1.5 + page.rowSpacingMm * pxPerMm;
   const rows = Math.max(1, Math.floor(((page.heightMm - 2 * page.marginMm) * pxPerMm) / lineHeight));
   const usableWidth = (page.widthMm - 2 * page.marginMm) * pxPerMm;
-  const gap = page.gapMm * pxPerMm;
-  const horizontalPadding = 3 * pxPerMm;
+  const gap = page.columnSpacingMm * pxPerMm;
+  const horizontalPadding = page.columnSpacingMm * pxPerMm;
   const measured = cards.map((word) => ({ word, width: context.measureText(word).width + horizontalPadding }));
   measured.sort((left, right) => left.width - right.width || left.word.localeCompare(right.word));
 
@@ -315,6 +353,8 @@ document.fonts.ready.then(buildLayout).catch((error) => { deck.textContent = `Co
         .replace("__WIDTH__", &width_mm.to_string())
         .replace("__HEIGHT__", &height_mm.to_string())
         .replace("__FONT_SIZE__", &font_size.to_string())
+        .replace("__ROW_SPACING__", &row_spacing.to_string())
+        .replace("__COLUMN_SPACING__", &column_spacing.to_string())
         .replace("__CARDS__", &cards_json))
 }
 
@@ -327,7 +367,7 @@ pub fn render_typst_for_page(
     paper_size: &str,
     orientation: &str,
 ) -> Result<String, String> {
-    render_typst_for_page_with_font(cards, paper_size, orientation, 14.0)
+    render_typst_for_page_with_font(cards, paper_size, orientation, default_font_size())
 }
 
 pub fn render_typst_for_page_with_font(
@@ -336,7 +376,27 @@ pub fn render_typst_for_page_with_font(
     orientation: &str,
     font_size: f64,
 ) -> Result<String, String> {
+    render_typst_for_page_with_layout(
+        cards,
+        paper_size,
+        orientation,
+        font_size,
+        default_row_spacing(),
+        default_column_spacing(),
+    )
+}
+
+pub fn render_typst_for_page_with_layout(
+    cards: &[String],
+    paper_size: &str,
+    orientation: &str,
+    font_size: f64,
+    row_spacing: f64,
+    column_spacing: f64,
+) -> Result<String, String> {
     validate_font_size(font_size)?;
+    validate_spacing("row_spacing", row_spacing)?;
+    validate_spacing("column_spacing", column_spacing)?;
     let (width_mm, height_mm, _) = page_spec(paper_size, orientation)?;
     let sampled = cards
         .iter()
@@ -349,17 +409,17 @@ pub fn render_typst_for_page_with_font(
         r##"#set page(width: __PAGE_WIDTH__mm, height: __PAGE_HEIGHT__mm, margin: 4mm)
 #set text(font: "Libertinus Serif", size: __FONT_SIZE__pt)
 #set par(leading: 0.5em)
-#set table(stroke: none, inset: (x: 1.5mm, y: 2.4mm), align: center + horizon)
+#set table(stroke: none, inset: (x: __TABLE_INSET_X__mm, y: __ROW_SPACING__mm), align: center + horizon)
 
 #let sampled = (
 __SAMPLED__,
 )
 #context {
   let words = sampled.sorted().sorted(key: word => measure(text(word)).width)
-  let cell-inset = 3mm
+  let cell-inset = __COLUMN_SPACING__mm
   let printable-width = __PRINTABLE_WIDTH__mm
   let printable-height = __PRINTABLE_HEIGHT__mm
-  let row-height = measure(box(inset: (y: 2.4mm))[Ag]).height
+  let row-height = measure(box(inset: (y: __ROW_SPACING__mm))[Ag]).height
   let rows-per-column = calc.floor(printable-height / row-height)
   let column-width(column) = {
     let widest = 0pt
@@ -405,6 +465,9 @@ __SAMPLED__,
         .replace("__PRINTABLE_WIDTH__", &printable_width.to_string())
         .replace("__PRINTABLE_HEIGHT__", &printable_height.to_string())
         .replace("__FONT_SIZE__", &font_size.to_string())
+        .replace("__TABLE_INSET_X__", &(column_spacing / 2.0).to_string())
+        .replace("__ROW_SPACING__", &row_spacing.to_string())
+        .replace("__COLUMN_SPACING__", &column_spacing.to_string())
         .replace("__SAMPLED__", &sampled),
     )
 }
@@ -412,6 +475,13 @@ __SAMPLED__,
 fn validate_font_size(font_size: f64) -> Result<(), String> {
     if !font_size.is_finite() || !(6.0..=36.0).contains(&font_size) {
         return Err("font_size must be between 6 and 36 points".to_owned());
+    }
+    Ok(())
+}
+
+fn validate_spacing(name: &str, spacing: f64) -> Result<(), String> {
+    if !spacing.is_finite() || !(0.0..=12.0).contains(&spacing) {
+        return Err(format!("{name} must be between 0 and 12 millimetres"));
     }
     Ok(())
 }
