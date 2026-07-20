@@ -25,22 +25,21 @@
           <legend>Choose your words</legend>
           <div class="fields">
             <label class="wide-field">Word style
-              <select name="corpus"><option value="asimov">Classic science-fiction magazine words</option><option value="fiction-xlsx">General fiction words</option></select>
-              <small>Choose the kind of language you want to play with.</small>
+              <select name="corpus"><option value="asimov">Science fiction</option><option value="fiction-xlsx">General fiction</option><option value="wikipedia">English Wikipedia</option></select>
+              <small id="corpus-credit">From 90 issues of Asimov's Science Fiction, preserved by the Internet Archive.</small>
             </label>
             <label>How many words?
               <input name="count" type="number" min="100" value="2800">
               <small>Each word is printed on its own cut-out card.</small>
             </label>
-            <label>Word variety
+            <label>Unique words
               <input name="paletteSize" type="number" min="50" value="700">
               <small>Higher gives more different words; lower repeats useful ones.</small>
             </label>
-            <label>Everyday words
-              <input name="requiredHead" type="number" min="0" value="200">
+            <label>Include <span class="inline-control"><input name="includeCommon" type="checkbox" checked> the top <input name="requiredHead" type="number" min="0" value="200"> most common words</span>
               <small>Keep small connecting words so it is easier to form sentences.</small>
             </label>
-            <label>Mix number
+            <label>Bag number
               <input name="seed" type="number" value="20260717">
               <small>Use the same number to make the same bag again.</small>
             </label>
@@ -54,16 +53,12 @@
               <span class="field-label">Pick a typeface</span>
               <div class="font-picker" data-font-picker>
                 <input name="fontFamily" type="hidden" value="libertinus">
-                <button type="button" class="font-choice" data-font="libertinus" aria-pressed="true"><span>Libertinus Serif</span><span class="font-sample font-libertinus">Make a story</span></button>
-                <button type="button" class="font-choice" data-font="literata" aria-pressed="false"><span>Literata</span><span class="font-sample font-literata">Make a story</span></button>
-                <button type="button" class="font-choice" data-font="source-serif-4" aria-pressed="false"><span>Source Serif 4</span><span class="font-sample font-source-serif">Make a story</span></button>
-                <button type="button" class="font-choice" data-font="atkinson-hyperlegible" aria-pressed="false"><span>Atkinson Hyperlegible</span><span class="font-sample font-atkinson">Make a story</span></button>
-                <button type="button" class="font-choice" data-font="space-grotesk" aria-pressed="false"><span>Space Grotesk</span><span class="font-sample font-space-grotesk">Make a story</span></button>
-                <button type="button" class="font-choice" data-font="dm-mono" aria-pressed="false"><span>DM Mono</span><span class="font-sample font-dm-mono">Make a story</span></button>
+                <input class="font-search" type="search" placeholder="Search typefaces" aria-label="Search typefaces">
+                <div class="font-options" role="group" aria-label="Typeface choices"></div>
               </div>
               <small>Choose the look of your word cards.</small>
             </div>
-            <label>Word size
+            <label>Font size
               <div class="unit-input"><input name="fontSize" type="number" min="6" max="36" step="0.5" value="14"><span>pt</span></div>
               <small>Size of the words on each card.</small>
             </label>
@@ -82,6 +77,12 @@
             <label>Space between columns
               <div class="unit-input"><input name="columnSpacing" type="number" min="0" max="12" step="0.1" value="3"><span>mm</span></div>
               <small>Horizontal room around each card for cutting.</small>
+            </label>
+            <label class="option-toggle"><input name="includePunctuation" type="checkbox" checked> Include punctuation
+              <small>Add useful sentence marks such as periods, quotes, question marks, and dashes.</small>
+            </label>
+            <label class="option-toggle"><input name="includeStems" type="checkbox"> Split common word endings
+              <small>Turn safe forms such as “walked” into “walk” and “-ed” when both pieces are useful words.</small>
             </label>
           </div>
         </fieldset>

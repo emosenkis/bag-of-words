@@ -11,6 +11,13 @@ fn embeds_frequency_only_asimov_and_fiction_corpora() {
             > 1_000_000
     );
     assert!(embedded_corpus("unknown").is_err());
+    assert!(
+        embedded_corpus("wikipedia")
+            .unwrap()
+            .frequency("the")
+            .unwrap()
+            > 1_000_000
+    );
 }
 
 #[test]

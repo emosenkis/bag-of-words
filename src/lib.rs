@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
+use rust_stemmers::{Algorithm, Stemmer};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -78,10 +79,16 @@ struct GenerationRequest {
     palette_size: usize,
     required_head: usize,
     seed: u64,
+    #[serde(default)]
+    include_punctuation: bool,
+    #[serde(default)]
+    include_stems: bool,
     #[serde(default = "default_font_size")]
     font_size: f64,
     #[serde(default = "default_font_family")]
     font_family: String,
+    #[serde(default)]
+    font_url: Option<String>,
     #[serde(default = "default_row_spacing")]
     row_spacing: f64,
     #[serde(default = "default_column_spacing")]
@@ -128,6 +135,7 @@ pub fn embedded_corpus(name: &str) -> Result<Corpus, String> {
     match name {
         "asimov" => Corpus::from_tsv(include_str!("../assets/asimov.tsv")),
         "fiction-xlsx" => Corpus::from_tsv(include_str!("../assets/fiction-xlsx.tsv")),
+        "wikipedia" => Corpus::from_tsv(include_str!("../assets/wikipedia.tsv")),
         _ => Err(format!("unknown corpus: {name}")),
     }
 }
@@ -136,11 +144,11 @@ pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
     let request: GenerationRequest = serde_json::from_str(request_json)
         .map_err(|error| format!("invalid request JSON: {error}"))?;
     validate_font_size(request.font_size)?;
-    let font = font_spec(&request.font_family)?;
+    let font = font_spec(&request.font_family, request.font_url.as_deref())?;
     validate_spacing("row_spacing", request.row_spacing)?;
     validate_spacing("column_spacing", request.column_spacing)?;
     let corpus = embedded_corpus(&request.corpus)?;
-    let cards = generate_deck(
+    let mut cards = generate_deck(
         &corpus,
         &DeckConfig {
             count: request.count,
@@ -149,6 +157,12 @@ pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
             seed: request.seed,
         },
     )?;
+    if request.include_stems {
+        cards = expand_safe_stems(cards, &corpus, request.seed);
+    }
+    if request.include_punctuation {
+        add_punctuation(&mut cards, request.seed);
+    }
     let content = match request.format.as_str() {
         "txt" => render_text(&cards),
         "html" => render_html_for_page_with_typography(
@@ -176,6 +190,87 @@ pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
         cards,
         content,
     })
+}
+
+const PREFIXES: &[&str] = &[
+    "anti", "auto", "counter", "de", "dis", "extra", "hyper", "inter", "mis", "non", "out", "over",
+    "post", "pre", "re", "semi", "sub", "super", "trans", "un", "under",
+];
+const SUFFIXES: &[&str] = &[
+    "ization", "ation", "ition", "ment", "ness", "able", "ible", "ious", "ing", "ed", "er", "est",
+    "es", "ly", "s",
+];
+
+fn expand_safe_stems(cards: Vec<String>, corpus: &Corpus, seed: u64) -> Vec<String> {
+    let stemmer = Stemmer::create(Algorithm::English);
+    let original_len = cards.len();
+    let mut expanded = Vec::with_capacity(original_len);
+    for word in cards {
+        if let Some((root, affix)) = split_safe_word(&word, corpus, &stemmer) {
+            expanded.push(root);
+            expanded.push(affix);
+        } else {
+            expanded.push(word);
+        }
+    }
+    let mut rng = ChaCha8Rng::seed_from_u64(seed ^ 0x57E5_0001);
+    for index in (1..expanded.len()).rev() {
+        let other = rng.random_range(0..=index);
+        expanded.swap(index, other);
+    }
+    expanded.truncate(original_len);
+    expanded
+}
+
+fn split_safe_word(word: &str, corpus: &Corpus, stemmer: &Stemmer) -> Option<(String, String)> {
+    if let Some(root) = word.strip_suffix("'s") {
+        if is_attested_root(root, word, corpus) {
+            return Some((root.to_owned(), "'s".to_owned()));
+        }
+    }
+    for prefix in PREFIXES {
+        if let Some(root) = word.strip_prefix(prefix) {
+            if is_attested_root(root, word, corpus) {
+                return Some((root.to_owned(), format!("{prefix}-")));
+            }
+        }
+    }
+    let stem = stemmer.stem(word).to_string();
+    if !is_attested_root(&stem, word, corpus) || !word.starts_with(&stem) {
+        return None;
+    }
+    let ending = &word[stem.len()..];
+    if SUFFIXES.contains(&ending) {
+        return Some((stem, format!("-{ending}")));
+    }
+    None
+}
+
+fn is_attested_root(root: &str, word: &str, corpus: &Corpus) -> bool {
+    root.len() >= 2
+        && corpus
+            .frequency(root)
+            .is_some_and(|frequency| frequency >= corpus.frequency(word).unwrap_or(0))
+}
+
+fn add_punctuation(cards: &mut Vec<String>, seed: u64) {
+    let punctuation_count = (cards.len() / 32).max(1).min(cards.len());
+    cards.truncate(cards.len() - punctuation_count);
+    let marks = [".", "\"", "?", "!", "—", ":"];
+    let weights = [50_u32, 20, 10, 10, 6, 4];
+    let mut rng = ChaCha8Rng::seed_from_u64(seed ^ 0xA11C_E710);
+    for _ in 0..punctuation_count {
+        let mut ticket = rng.random_range(0..weights.iter().sum::<u32>());
+        let mut mark = marks[0];
+        for (candidate, weight) in marks.iter().zip(weights) {
+            if ticket < weight {
+                mark = candidate;
+                break;
+            }
+            ticket -= weight;
+        }
+        cards.push(mark.to_owned());
+    }
 }
 
 #[wasm_bindgen]
@@ -294,7 +389,7 @@ pub fn render_html_for_page_with_layout(
         paper_size,
         orientation,
         font_size,
-        font_spec("libertinus")?,
+        font_spec("libertinus", None)?,
         row_spacing,
         column_spacing,
     )
@@ -383,9 +478,9 @@ document.fonts.ready.then(buildLayout).catch((error) => { deck.textContent = `Co
         .replace("__WIDTH__", &width_mm.to_string())
         .replace("__HEIGHT__", &height_mm.to_string())
         .replace("__FONT_SIZE__", &font_size.to_string())
-        .replace("__FONT_NAME__", font.name)
-        .replace("__FONT_URL__", font.url)
-        .replace("__FONT_FALLBACK__", font.css_fallback)
+        .replace("__FONT_NAME__", &font.name)
+        .replace("__FONT_URL__", &font.url)
+        .replace("__FONT_FALLBACK__", &font.css_fallback)
         .replace("__ROW_SPACING__", &row_spacing.to_string())
         .replace("__COLUMN_SPACING__", &column_spacing.to_string())
         .replace("__CARDS__", &cards_json))
@@ -432,7 +527,7 @@ pub fn render_typst_for_page_with_layout(
         paper_size,
         orientation,
         font_size,
-        font_spec("libertinus")?,
+        font_spec("libertinus", None)?,
         row_spacing,
         column_spacing,
     )
@@ -518,7 +613,7 @@ __SAMPLED__,
         .replace("__PRINTABLE_WIDTH__", &printable_width.to_string())
         .replace("__PRINTABLE_HEIGHT__", &printable_height.to_string())
         .replace("__FONT_SIZE__", &font_size.to_string())
-        .replace("__FONT_NAME__", font.name)
+        .replace("__FONT_NAME__", &font.name)
         .replace("__TABLE_INSET_X__", &(column_spacing / 2.0).to_string())
         .replace("__ROW_SPACING__", &row_spacing.to_string())
         .replace("__COLUMN_SPACING__", &column_spacing.to_string())
@@ -526,44 +621,68 @@ __SAMPLED__,
     )
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct FontSpec {
-    name: &'static str,
-    url: &'static str,
-    css_fallback: &'static str,
+    name: String,
+    url: String,
+    css_fallback: String,
 }
 
-fn font_spec(id: &str) -> Result<FontSpec, String> {
+fn font_spec(id: &str, url: Option<&str>) -> Result<FontSpec, String> {
+    if let Some(url) = url {
+        if id.is_empty()
+            || id.len() > 80
+            || !id
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == ' ')
+            || !(url.starts_with("https://fonts.gstatic.com/")
+                || url.starts_with("https://cdn.jsdelivr.net/"))
+        {
+            return Err("unknown font family".to_owned());
+        }
+        return Ok(FontSpec {
+            name: id.to_owned(),
+            url: url.to_owned(),
+            css_fallback: if id.contains("Mono") {
+                "monospace"
+            } else if id.contains("Sans")
+                || id == "Roboto"
+                || id == "Montserrat"
+                || id == "Nunito"
+                || id == "Rubik"
+                || id == "Ubuntu"
+                || id == "Work Sans"
+                || id == "Barlow"
+                || id == "Cabin"
+                || id == "Oswald"
+            {
+                "sans-serif"
+            } else {
+                "serif"
+            }
+            .to_owned(),
+        });
+    }
     let font = match id {
         "libertinus" => FontSpec {
-            name: "Libertinus Serif",
-            url: "https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/LibertinusSerif-Regular.otf",
-            css_fallback: "serif",
+            name: "Libertinus Serif".to_owned(),
+            url: "https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/LibertinusSerif-Regular.otf".to_owned(),
+            css_fallback: "serif".to_owned(),
         },
         "literata" => FontSpec {
-            name: "Literata",
-            url: "https://fonts.gstatic.com/s/literata/v40/or3PQ6P12-iJxAIgLa78DkrbXsDgk0oVDaDPYLanFLHpPf2TbPa4F_Y.ttf",
-            css_fallback: "serif",
+            name: "Literata".to_owned(), url: "https://fonts.gstatic.com/s/literata/v40/or3PQ6P12-iJxAIgLa78DkrbXsDgk0oVDaDPYLanFLHpPf2TbPa4F_Y.ttf".to_owned(), css_fallback: "serif".to_owned(),
         },
         "source-serif-4" => FontSpec {
-            name: "Source Serif 4",
-            url: "https://fonts.gstatic.com/s/sourceserif4/v14/vEFy2_tTDB4M7-auWDN0ahZJW3IX2ih5nk3AucvUHf6OAVIJmeUDygwjivBtrhw.ttf",
-            css_fallback: "serif",
+            name: "Source Serif 4".to_owned(), url: "https://fonts.gstatic.com/s/sourceserif4/v14/vEFy2_tTDB4M7-auWDN0ahZJW3IX2ih5nk3AucvUHf6OAVIJmeUDygwjivBtrhw.ttf".to_owned(), css_fallback: "serif".to_owned(),
         },
         "atkinson-hyperlegible" => FontSpec {
-            name: "Atkinson Hyperlegible",
-            url: "https://fonts.gstatic.com/s/atkinsonhyperlegible/v12/9Bt73C1KxNDXMspQ1lPyU89-1h6ONRlW45G8WbcNcw.ttf",
-            css_fallback: "sans-serif",
+            name: "Atkinson Hyperlegible".to_owned(), url: "https://fonts.gstatic.com/s/atkinsonhyperlegible/v12/9Bt73C1KxNDXMspQ1lPyU89-1h6ONRlW45G8WbcNcw.ttf".to_owned(), css_fallback: "sans-serif".to_owned(),
         },
         "space-grotesk" => FontSpec {
-            name: "Space Grotesk",
-            url: "https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj4PVksj.ttf",
-            css_fallback: "sans-serif",
+            name: "Space Grotesk".to_owned(), url: "https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj4PVksj.ttf".to_owned(), css_fallback: "sans-serif".to_owned(),
         },
         "dm-mono" => FontSpec {
-            name: "DM Mono",
-            url: "https://fonts.gstatic.com/s/dmmono/v16/aFTR7PB1QTsUX8KYvumzIYQ.ttf",
-            css_fallback: "monospace",
+            name: "DM Mono".to_owned(), url: "https://fonts.gstatic.com/s/dmmono/v16/aFTR7PB1QTsUX8KYvumzIYQ.ttf".to_owned(), css_fallback: "monospace".to_owned(),
         },
         _ => return Err(format!("unknown font family: {id}")),
     };
