@@ -6,3 +6,10 @@ label { display: grid; gap: .35rem; font-weight: 600; }
 input, select, button { font: inherit; padding: .5rem; }
 button { align-self: end; cursor: pointer; font-weight: 700; }
 output { display: block; min-height: 1.5rem; }
+iframe#result {
+  width: 100%;
+  min-height: 70vh;
+  margin-top: 1rem;
+  border: 1px solid #aab;
+  background: white;
+}

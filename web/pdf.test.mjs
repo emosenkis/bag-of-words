@@ -2,20 +2,22 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { compilePdf } from "./pdf.js";
 
-test("reports a PDF compiler failure without downloading Typst source", async () => {
-  let downloads = 0;
-
+test("reports a PDF compiler failure without creating a download", async () => {
   const result = await compilePdf(
     "#set text[words]",
     async () => {
       throw new Error("compiler unavailable");
     },
-    () => {
-      downloads += 1;
-    },
   );
 
   assert.equal(result.ok, false);
   assert.match(result.message, /compiler unavailable/);
-  assert.equal(downloads, 0);
+});
+
+test("returns the generated PDF for preview and later download", async () => {
+  const pdf = new Uint8Array([37, 80, 68, 70]);
+  const result = await compilePdf("#set text[words]", async () => pdf);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.content, pdf);
 });

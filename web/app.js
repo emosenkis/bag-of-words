@@ -1,22 +1,39 @@
 import init, { generate } from "./pkg/word_deck.js";
 import { compilePdf } from "./pdf.js";
+import { artifactFor } from "./artifact.js";
 import { requestFromValues } from "./request.js";
 import { compileWithTypst } from "./typst-loader.js";
 
 const form = document.querySelector("#generator");
 const status = document.querySelector("#status");
+const generateButton = document.querySelector("#generate");
+const downloadButton = document.querySelector("#download");
+const resultFrame = document.querySelector("#result");
+let artifact;
+let previewUrl;
 
-function download(content, filename, mime) {
+function download(blob, filename) {
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  link.href = URL.createObjectURL(blob);
   link.download = filename;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 0);
 }
 
 async function exportPdf(typst) {
-  return compilePdf(typst, compileWithTypst, download);
+  return compilePdf(typst, compileWithTypst);
 }
+
+function showPreview(nextArtifact) {
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = URL.createObjectURL(nextArtifact.blob);
+  resultFrame.src = previewUrl;
+  resultFrame.hidden = false;
+}
+
+downloadButton.addEventListener("click", () => {
+  if (artifact) download(artifact.blob, artifact.filename);
+});
 
 await init();
 status.textContent = "Ready.";
@@ -27,18 +44,26 @@ form.addEventListener("submit", async (event) => {
   const request = requestFromValues(values);
   try {
     status.textContent = "Generating…";
+    generateButton.disabled = true;
+    downloadButton.disabled = true;
+    resultFrame.hidden = true;
     if (request.format === "pdf") {
       request.format = "typst";
       const response = JSON.parse(generate(JSON.stringify(request)));
       const result = await exportPdf(response.content);
-      status.textContent = result.message;
-      return;
+      if (!result.ok) throw new Error(result.message);
+      artifact = artifactFor("pdf", result.content);
+    } else {
+      const response = JSON.parse(generate(JSON.stringify(request)));
+      artifact = artifactFor(response.format, response.content);
     }
-    const response = JSON.parse(generate(JSON.stringify(request)));
-    const mime = response.format === "html" ? "text/html;charset=utf-8" : "text/plain;charset=utf-8";
-    download(response.content, `word-deck.${response.format}`, mime);
-    status.textContent = `Downloaded ${response.cards.length} cards as ${response.format.toUpperCase()}.`;
+    showPreview(artifact);
+    downloadButton.disabled = false;
+    status.textContent = `Generated ${artifact.filename}; preview shown below.`;
   } catch (error) {
+    artifact = undefined;
     status.textContent = `Could not generate deck: ${error.message}`;
+  } finally {
+    generateButton.disabled = false;
   }
 });

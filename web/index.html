@@ -20,9 +20,13 @@
         <label>Paper <select name="paperSize"><option value="letter">Letter</option><option value="a3">A3</option><option value="a4" selected>A4</option><option value="a5">A5</option></select></label>
         <label>Orientation <select name="orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></label>
         <label>Export <select name="format"><option value="pdf">PDF via Typst</option><option value="html">Printable HTML</option><option value="typst">Typst source</option><option value="txt">Plain text</option></select></label>
-        <button type="submit">Generate download</button>
+        <div class="actions">
+          <button id="generate" type="submit">Generate</button>
+          <button id="download" type="button" disabled>Download</button>
+        </div>
       </form>
       <output id="status" aria-live="polite">Loading word-deck WASM…</output>
+      <iframe id="result" title="Generated word deck" hidden></iframe>
     </main>
     <script type="importmap">
       {
