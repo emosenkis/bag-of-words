@@ -1,8 +1,8 @@
 const formats = {
-  html: { filename: "word-deck.html", mime: "text/html;charset=utf-8" },
-  pdf: { filename: "word-deck.pdf", mime: "application/pdf" },
-  txt: { filename: "word-deck.txt", mime: "text/plain;charset=utf-8" },
-  typst: { filename: "word-deck.typ", mime: "text/plain;charset=utf-8" },
+  html: { filename: "bag-of-words.html", mime: "text/html;charset=utf-8" },
+  pdf: { filename: "bag-of-words.pdf", mime: "application/pdf" },
+  txt: { filename: "bag-of-words.txt", mime: "text/plain;charset=utf-8" },
+  typst: { filename: "bag-of-words.typ", mime: "text/plain;charset=utf-8" },
 };
 
 export function artifactFor(format, content) {

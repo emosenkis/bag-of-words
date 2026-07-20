@@ -3,53 +3,67 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Word Deck</title>
+    <title>Bag of Words</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
     <main class="shell">
       <header class="masthead">
-        <p class="eyebrow">A printable writing prompt tool</p>
+        <p class="eyebrow">Words to cut, shuffle, and arrange</p>
         <div class="masthead-copy">
           <div>
-            <h1>Word Deck</h1>
-            <p>Turn a wide mix of fiction words into a physical prompt deck—ready to print, cut, shuffle, and write from.</p>
+            <h1>Bag of Words</h1>
+            <p>Make words you can arrange into stories, sentences, or Ransom Notes–style answers. Print them, cut them out, shuffle them, and see what you can make.</p>
           </div>
           <a class="repository-link" href="https://github.com/emosenkis/bag-of-words">View on GitHub <span aria-hidden="true">↗</span></a>
         </div>
       </header>
       <form id="generator">
         <fieldset class="form-section source-section">
-          <legend>Words</legend>
+          <legend>Choose your words</legend>
           <div class="fields">
-            <label class="wide-field">Word frequency source
-              <select name="corpus"><option value="asimov">Asimov magazine frequency data</option><option value="fiction-xlsx">Fiction frequency dataset</option></select>
-              <small>The embedded frequency table used to choose words.</small>
+            <label class="wide-field">Word style
+              <select name="corpus"><option value="asimov">Classic science-fiction magazine words</option><option value="fiction-xlsx">General fiction words</option></select>
+              <small>Choose the kind of language you want to play with.</small>
             </label>
-            <label>Total word cards
+            <label>How many words?
               <input name="count" type="number" min="100" value="2800">
-              <small>Every printed card, including repeats.</small>
+              <small>Each word is printed on its own cut-out card.</small>
             </label>
-            <label>Number of distinct words
+            <label>Word variety
               <input name="paletteSize" type="number" min="50" value="700">
-              <small>How broad the word palette should be.</small>
+              <small>Higher gives more different words; lower repeats useful ones.</small>
             </label>
-            <label>Guaranteed common words
+            <label>Everyday words
               <input name="requiredHead" type="number" min="0" value="200">
-              <small>Top-frequency words always included.</small>
+              <small>Keep small connecting words so it is easier to form sentences.</small>
             </label>
-            <label>Random seed
+            <label>Mix number
               <input name="seed" type="number" value="20260717">
-              <small>Reuse a seed to reproduce a deck.</small>
+              <small>Use the same number to make the same bag again.</small>
             </label>
           </div>
         </fieldset>
 
         <fieldset class="form-section page-section">
-          <legend>Page and spacing</legend>
+          <legend>Make it printable</legend>
           <div class="fields">
-            <label>Font size
+            <div class="font-field">
+              <span class="field-label">Pick a typeface</span>
+              <div class="font-picker" data-font-picker>
+                <input name="fontFamily" type="hidden" value="libertinus">
+                <button type="button" class="font-choice" data-font="libertinus" aria-pressed="true"><span>Libertinus Serif</span><span class="font-sample font-libertinus">Make a story</span></button>
+                <button type="button" class="font-choice" data-font="literata" aria-pressed="false"><span>Literata</span><span class="font-sample font-literata">Make a story</span></button>
+                <button type="button" class="font-choice" data-font="source-serif-4" aria-pressed="false"><span>Source Serif 4</span><span class="font-sample font-source-serif">Make a story</span></button>
+                <button type="button" class="font-choice" data-font="atkinson-hyperlegible" aria-pressed="false"><span>Atkinson Hyperlegible</span><span class="font-sample font-atkinson">Make a story</span></button>
+                <button type="button" class="font-choice" data-font="space-grotesk" aria-pressed="false"><span>Space Grotesk</span><span class="font-sample font-space-grotesk">Make a story</span></button>
+                <button type="button" class="font-choice" data-font="dm-mono" aria-pressed="false"><span>DM Mono</span><span class="font-sample font-dm-mono">Make a story</span></button>
+              </div>
+              <small>Choose the look of your word cards.</small>
+            </div>
+            <label>Word size
               <div class="unit-input"><input name="fontSize" type="number" min="6" max="36" step="0.5" value="14"><span>pt</span></div>
               <small>Size of the words on each card.</small>
             </label>
@@ -57,15 +71,15 @@
               <select name="paperSize"><option value="letter">Letter</option><option value="a3">A3</option><option value="a4" selected>A4</option><option value="a5">A5</option></select>
               <small>Finished sheet dimensions.</small>
             </label>
-            <label>Page orientation
+            <label>Page direction
               <select name="orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
               <small>Direction of the finished sheet.</small>
             </label>
-            <label>Row spacing
+            <label>Space between rows
               <div class="unit-input"><input name="rowSpacing" type="number" min="0" max="12" step="0.1" value="2.4"><span>mm</span></div>
               <small>Vertical room around each card for cutting.</small>
             </label>
-            <label>Column spacing
+            <label>Space between columns
               <div class="unit-input"><input name="columnSpacing" type="number" min="0" max="12" step="0.1" value="3"><span>mm</span></div>
               <small>Horizontal room around each card for cutting.</small>
             </label>
@@ -73,25 +87,26 @@
         </fieldset>
 
         <fieldset class="form-section export-section">
-          <legend>Export</legend>
+          <legend>Make your bag</legend>
           <div class="fields export-fields">
-            <label>Download format
+            <label>Save as
               <select name="format"><option value="pdf">PDF</option><option value="html">Printable HTML</option><option value="typst">Typst source</option><option value="txt">Plain text</option></select>
-              <small>PDF is compiled in your browser.</small>
+              <small>Choose PDF to print, or another format to use elsewhere.</small>
             </label>
             <div class="actions">
-              <button id="generate" type="submit">Generate deck</button>
-              <button id="download" type="button" disabled>Download file</button>
+              <button id="generate" type="submit">Generate bag</button>
+              <button id="download" type="button" disabled>Download bag</button>
             </div>
           </div>
         </fieldset>
       </form>
-      <section class="result-panel" aria-label="Generated deck">
-        <output id="status" aria-live="polite">Loading word-deck WASM…</output>
-        <iframe id="result" title="Generated word deck" hidden></iframe>
+      <section class="result-panel" aria-label="Generated bag of words">
+        <output id="status" aria-live="polite">Loading Bag of Words…</output>
+        <iframe id="result" title="Generated bag of words" hidden></iframe>
       </section>
       <footer>Runs locally in your browser. <a href="https://github.com/emosenkis/bag-of-words">Source code and documentation</a></footer>
     </main>
+    <script type="module" src="font-picker.js"></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

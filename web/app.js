@@ -3,6 +3,7 @@ import { compilePdf } from "./pdf.js";
 import { artifactFor } from "./artifact.js";
 import { requestFromValues } from "./request.js";
 import { compileWithTypst } from "./typst-loader.js";
+import { fontFor } from "./fonts.js";
 
 const form = document.querySelector("#generator");
 const status = document.querySelector("#status");
@@ -20,8 +21,8 @@ function download(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(link.href), 0);
 }
 
-async function exportPdf(typst) {
-  return compilePdf(typst, compileWithTypst);
+async function exportPdf(typst, font) {
+  return compilePdf(typst, (source) => compileWithTypst(source, font));
 }
 
 function showPreview(nextArtifact) {
@@ -50,7 +51,7 @@ form.addEventListener("submit", async (event) => {
     if (request.format === "pdf") {
       request.format = "typst";
       const response = JSON.parse(generate(JSON.stringify(request)));
-      const result = await exportPdf(response.content);
+      const result = await exportPdf(response.content, fontFor(values.fontFamily));
       if (!result.ok) throw new Error(result.message);
       artifact = artifactFor("pdf", result.content);
     } else {
@@ -59,10 +60,10 @@ form.addEventListener("submit", async (event) => {
     }
     showPreview(artifact);
     downloadButton.disabled = false;
-    status.textContent = `Generated ${artifact.filename}; preview shown below.`;
+    status.textContent = `Your bag is ready: ${artifact.filename}. Preview shown below.`;
   } catch (error) {
     artifact = undefined;
-    status.textContent = `Could not generate deck: ${error.message}`;
+    status.textContent = `Could not generate your bag: ${error.message}`;
   } finally {
     generateButton.disabled = false;
   }

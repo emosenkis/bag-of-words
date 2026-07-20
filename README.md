@@ -1,6 +1,6 @@
 # Bag of Words
 
-[Bag of Words](https://emosenkis.github.io/bag-of-words/) is a fully static, browser-run tool for making printable decks of story-building words. Pick a frequency source and deck size, tune the page layout, then generate a PDF, printable HTML, Typst source, or plain-text list.
+[Bag of Words](https://emosenkis.github.io/bag-of-words/) makes printable words you can cut out, shuffle, and arrange into stories, sentences, or Ransom Notes–style answers. Choose the word style and amount of variety you want, tune the page layout, then generate a PDF, printable HTML, Typst source, or plain-text list.
 
 The application is deliberately built around word-frequency data, not source prose. It does not embed or send the underlying texts; generation takes place locally in the browser.
 
@@ -9,7 +9,11 @@ The application is deliberately built around word-frequency data, not source pro
 1. The chosen embedded frequency table provides the candidate words and their relative frequencies.
 2. The generator creates a broad palette, guarantees a configurable number of high-frequency words, then assigns the remaining cards according to square-root frequency weighting. This keeps function words useful without allowing a tiny handful of words to take over the deck.
 3. Cards are sorted by rendered word width and then alphabetically. Each page is filled top-to-bottom in columns sized to their widest word, so similarly sized words pack together.
-4. The selected font size, paper size, orientation, row spacing, and column spacing control the layout. PDF output is compiled in-browser; no fallback download is substituted if that compiler fails.
+4. Pick a typeface from the preview cards, then set the word size, paper size, page direction, and cutting space. PDF output is compiled in-browser with the selected typeface; no fallback download is substituted if that compiler fails.
+
+## Typefaces
+
+The picker previews Libertinus Serif plus Google Fonts: Literata, Source Serif 4, Atkinson Hyperlegible, Space Grotesk, and DM Mono. The same selected font is fetched for PDF generation, so the PDF and printable HTML are laid out with that typeface rather than a substitute. Generating a PDF with a Google Font therefore needs an internet connection the first time that font is used.
 
 ## Included frequency data
 

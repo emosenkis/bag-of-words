@@ -80,6 +80,8 @@ struct GenerationRequest {
     seed: u64,
     #[serde(default = "default_font_size")]
     font_size: f64,
+    #[serde(default = "default_font_family")]
+    font_family: String,
     #[serde(default = "default_row_spacing")]
     row_spacing: f64,
     #[serde(default = "default_column_spacing")]
@@ -101,6 +103,10 @@ fn default_orientation() -> String {
 
 fn default_font_size() -> f64 {
     14.0
+}
+
+fn default_font_family() -> String {
+    "libertinus".to_owned()
 }
 
 fn default_row_spacing() -> f64 {
@@ -130,6 +136,7 @@ pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
     let request: GenerationRequest = serde_json::from_str(request_json)
         .map_err(|error| format!("invalid request JSON: {error}"))?;
     validate_font_size(request.font_size)?;
+    let font = font_spec(&request.font_family)?;
     validate_spacing("row_spacing", request.row_spacing)?;
     validate_spacing("column_spacing", request.column_spacing)?;
     let corpus = embedded_corpus(&request.corpus)?;
@@ -144,19 +151,21 @@ pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
     )?;
     let content = match request.format.as_str() {
         "txt" => render_text(&cards),
-        "html" => render_html_for_page_with_layout(
+        "html" => render_html_for_page_with_typography(
             &cards,
             &request.paper_size,
             &request.orientation,
             request.font_size,
+            font,
             request.row_spacing,
             request.column_spacing,
         )?,
-        "typst" => render_typst_for_page_with_layout(
+        "typst" => render_typst_for_page_with_typography(
             &cards,
             &request.paper_size,
             &request.orientation,
             request.font_size,
+            font,
             request.row_spacing,
             request.column_spacing,
         )?,
@@ -280,6 +289,26 @@ pub fn render_html_for_page_with_layout(
     row_spacing: f64,
     column_spacing: f64,
 ) -> Result<String, String> {
+    render_html_for_page_with_typography(
+        cards,
+        paper_size,
+        orientation,
+        font_size,
+        font_spec("libertinus")?,
+        row_spacing,
+        column_spacing,
+    )
+}
+
+pub fn render_html_for_page_with_typography(
+    cards: &[String],
+    paper_size: &str,
+    orientation: &str,
+    font_size: f64,
+    font: FontSpec,
+    row_spacing: f64,
+    column_spacing: f64,
+) -> Result<String, String> {
     validate_font_size(font_size)?;
     validate_spacing("row_spacing", row_spacing)?;
     validate_spacing("column_spacing", column_spacing)?;
@@ -291,7 +320,8 @@ pub fn render_html_for_page_with_layout(
 <html><head><meta charset="utf-8"><title>Word deck</title><style>
 @page { size: __PAPER__ __ORIENTATION__; margin: 4mm; }
 html, body { margin: 0; padding: 0; }
-body { font: __FONT_SIZE__pt sans-serif; }
+@font-face { font-family: "__FONT_NAME__"; src: url("__FONT_URL__"); }
+body { font: __FONT_SIZE__pt "__FONT_NAME__", __FONT_FALLBACK__; }
 #deck { display: block; }
 .page { box-sizing: border-box; display: flex; gap: __COLUMN_SPACING__mm; overflow: hidden; page-break-after: always; break-after: page; }
 .column { box-sizing: border-box; flex: none; }
@@ -353,6 +383,9 @@ document.fonts.ready.then(buildLayout).catch((error) => { deck.textContent = `Co
         .replace("__WIDTH__", &width_mm.to_string())
         .replace("__HEIGHT__", &height_mm.to_string())
         .replace("__FONT_SIZE__", &font_size.to_string())
+        .replace("__FONT_NAME__", font.name)
+        .replace("__FONT_URL__", font.url)
+        .replace("__FONT_FALLBACK__", font.css_fallback)
         .replace("__ROW_SPACING__", &row_spacing.to_string())
         .replace("__COLUMN_SPACING__", &column_spacing.to_string())
         .replace("__CARDS__", &cards_json))
@@ -394,6 +427,26 @@ pub fn render_typst_for_page_with_layout(
     row_spacing: f64,
     column_spacing: f64,
 ) -> Result<String, String> {
+    render_typst_for_page_with_typography(
+        cards,
+        paper_size,
+        orientation,
+        font_size,
+        font_spec("libertinus")?,
+        row_spacing,
+        column_spacing,
+    )
+}
+
+pub fn render_typst_for_page_with_typography(
+    cards: &[String],
+    paper_size: &str,
+    orientation: &str,
+    font_size: f64,
+    font: FontSpec,
+    row_spacing: f64,
+    column_spacing: f64,
+) -> Result<String, String> {
     validate_font_size(font_size)?;
     validate_spacing("row_spacing", row_spacing)?;
     validate_spacing("column_spacing", column_spacing)?;
@@ -407,7 +460,7 @@ pub fn render_typst_for_page_with_layout(
     let printable_height = height_mm - 8.0;
     Ok(
         r##"#set page(width: __PAGE_WIDTH__mm, height: __PAGE_HEIGHT__mm, margin: 4mm)
-#set text(font: "Libertinus Serif", size: __FONT_SIZE__pt)
+#set text(font: "__FONT_NAME__", size: __FONT_SIZE__pt)
 #set par(leading: 0.5em)
 #set table(stroke: none, inset: (x: __TABLE_INSET_X__mm, y: __ROW_SPACING__mm), align: center + horizon)
 
@@ -465,11 +518,56 @@ __SAMPLED__,
         .replace("__PRINTABLE_WIDTH__", &printable_width.to_string())
         .replace("__PRINTABLE_HEIGHT__", &printable_height.to_string())
         .replace("__FONT_SIZE__", &font_size.to_string())
+        .replace("__FONT_NAME__", font.name)
         .replace("__TABLE_INSET_X__", &(column_spacing / 2.0).to_string())
         .replace("__ROW_SPACING__", &row_spacing.to_string())
         .replace("__COLUMN_SPACING__", &column_spacing.to_string())
         .replace("__SAMPLED__", &sampled),
     )
+}
+
+#[derive(Clone, Copy)]
+pub struct FontSpec {
+    name: &'static str,
+    url: &'static str,
+    css_fallback: &'static str,
+}
+
+fn font_spec(id: &str) -> Result<FontSpec, String> {
+    let font = match id {
+        "libertinus" => FontSpec {
+            name: "Libertinus Serif",
+            url: "https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/LibertinusSerif-Regular.otf",
+            css_fallback: "serif",
+        },
+        "literata" => FontSpec {
+            name: "Literata",
+            url: "https://fonts.gstatic.com/s/literata/v40/or3PQ6P12-iJxAIgLa78DkrbXsDgk0oVDaDPYLanFLHpPf2TbPa4F_Y.ttf",
+            css_fallback: "serif",
+        },
+        "source-serif-4" => FontSpec {
+            name: "Source Serif 4",
+            url: "https://fonts.gstatic.com/s/sourceserif4/v14/vEFy2_tTDB4M7-auWDN0ahZJW3IX2ih5nk3AucvUHf6OAVIJmeUDygwjivBtrhw.ttf",
+            css_fallback: "serif",
+        },
+        "atkinson-hyperlegible" => FontSpec {
+            name: "Atkinson Hyperlegible",
+            url: "https://fonts.gstatic.com/s/atkinsonhyperlegible/v12/9Bt73C1KxNDXMspQ1lPyU89-1h6ONRlW45G8WbcNcw.ttf",
+            css_fallback: "sans-serif",
+        },
+        "space-grotesk" => FontSpec {
+            name: "Space Grotesk",
+            url: "https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj4PVksj.ttf",
+            css_fallback: "sans-serif",
+        },
+        "dm-mono" => FontSpec {
+            name: "DM Mono",
+            url: "https://fonts.gstatic.com/s/dmmono/v16/aFTR7PB1QTsUX8KYvumzIYQ.ttf",
+            css_fallback: "monospace",
+        },
+        _ => return Err(format!("unknown font family: {id}")),
+    };
+    Ok(font)
 }
 
 fn validate_font_size(font_size: f64) -> Result<(), String> {

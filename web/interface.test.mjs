@@ -5,11 +5,15 @@ import test from "node:test";
 test("the generator form uses clear labels and exposes layout spacing", async () => {
   const page = await readFile(new URL("./index.html", import.meta.url), "utf8");
 
-  assert.match(page, /Word frequency source/);
-  assert.match(page, /Total word cards/);
+  assert.match(page, /Bag of Words/);
+  assert.match(page, /Word style/);
+  assert.match(page, /How many words\?/);
   assert.match(page, /Paper size/);
-  assert.match(page, /Row spacing/);
-  assert.match(page, /Column spacing/);
+  assert.match(page, /Space between rows/);
+  assert.match(page, /Space between columns/);
+  assert.match(page, /Pick a typeface/);
+  assert.match(page, /name="fontFamily"/);
+  assert.match(page, /data-font="literata"/);
   assert.match(page, /name="rowSpacing"/);
   assert.match(page, /name="columnSpacing"/);
   assert.match(page, /PDF<\/option>/);

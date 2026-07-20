@@ -6,6 +6,7 @@ export function requestFromValues(values) {
     required_head: Number(values.requiredHead),
     seed: Number(values.seed),
     font_size: Number(values.fontSize),
+    font_family: values.fontFamily,
     row_spacing: Number(values.rowSpacing),
     column_spacing: Number(values.columnSpacing),
     paper_size: values.paperSize,

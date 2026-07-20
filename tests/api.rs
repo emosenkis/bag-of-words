@@ -32,3 +32,17 @@ fn json_api_passes_layout_spacing_to_typst() {
     assert!(response.content.contains("inset: (x: 2mm, y: 3mm)"));
     assert!(response.content.contains("let cell-inset = 4mm"));
 }
+
+#[test]
+fn json_api_uses_the_selected_font_family() {
+    let response = generate_json(
+        r#"{"corpus":"asimov","count":40,"palette_size":20,"required_head":10,"seed":3,"font_family":"space-grotesk","format":"typst"}"#,
+    )
+    .unwrap();
+
+    assert!(
+        response
+            .content
+            .contains("#set text(font: \"Space Grotesk\"")
+    );
+}
