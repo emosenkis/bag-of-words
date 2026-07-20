@@ -6,7 +6,7 @@ const corpusCredit = document.querySelector("#corpus-credit");
 
 const corpusCredits = {
   asimov: "From 90 issues of Asimov's Science Fiction, preserved by the Internet Archive.",
-  "fiction-xlsx": "From the fiction section of the supplied word-frequency workbook.",
+  "fiction-xlsx": "From the fiction section of the COCA word-frequency corpus, via wordfrequency.info.",
   wikipedia: "From a ranked list built from one million English Wikipedia sentences.",
 };
 

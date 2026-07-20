@@ -24,7 +24,7 @@ Choose **Include punctuation** to add sentence-building marks. Choose **Split co
 | Choice in the app | Included file | Origin |
 | --- | --- | --- |
 | Asimov magazine frequency data | [assets/asimov.tsv](assets/asimov.tsv) | A cleaned, frequency-only table derived from English-language OCR in the [Internet Archive Asimov Magazine collection](https://archive.org/details/asimovmagazine). |
-| Fiction frequency dataset | [assets/fiction-xlsx.tsv](assets/fiction-xlsx.tsv) | A frequency-only conversion of the locally supplied `wordFrequency.xlsx` fiction-genre worksheet. The original workbook and its source texts are not redistributed here. |
+| General fiction | [assets/fiction-xlsx.tsv](assets/fiction-xlsx.tsv) | A frequency-only conversion of the fiction column in the [COCA word-frequency corpus](https://www.wordfrequency.info/samples.asp), supplied in `wordFrequency.xlsx`. The original workbook and its source texts are not redistributed here. |
 | English Wikipedia | [assets/wikipedia.tsv](assets/wikipedia.tsv) | A frequency-only, Zipf-scaled conversion of Wiktionary's ranked list from a [one-million-sentence English Wikipedia corpus](https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/English/Wikipedia_(2016)). Regenerate it with `python3 scripts/build_wikipedia_corpus.py`. |
 
 Both TSV files contain only `word` and `frequency` columns. They are compiled into the WebAssembly binary so the deployed site needs no server or corpus download.
