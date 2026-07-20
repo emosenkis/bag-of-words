@@ -17,7 +17,7 @@ The searchable picker previews 24 typefaces, including Libertinus Serif and a de
 
 ## Optional word pieces
 
-Choose **Include punctuation** to add sentence-building marks. Choose **Split common word endings** to turn only safe, attested forms into reusable pieces such as `walk` and `-ed`; the root must also occur in the selected corpus. The implementation uses the maintained [rust-stemmers](https://crates.io/crates/rust-stemmers) Snowball implementation as a conservative check, rather than treating every algorithmic stem as a usable word.
+Choose **Include punctuation** to add sentence-building marks. Choose **Split common inflected forms** to turn only attested forms into reusable pieces such as `walk` and `-ed`; the root must also occur in the selected corpus. The implementation uses the maintained [rust-stemmers](https://crates.io/crates/rust-stemmers) Snowball implementation as a conservative check, rather than treating every algorithmic stem as a usable word.
 
 ## Included frequency data
 

@@ -22,7 +22,8 @@
       </header>
       <form id="generator">
         <fieldset class="form-section source-section">
-          <legend>Choose your words</legend>
+          <legend class="visually-hidden">Choose your words</legend>
+          <div class="section-heading">Choose your words</div>
           <div class="fields">
             <label class="wide-field">Word style
               <select name="corpus"><option value="asimov">Science fiction</option><option value="fiction-xlsx">General fiction</option><option value="wikipedia">English Wikipedia</option></select>
@@ -47,7 +48,8 @@
         </fieldset>
 
         <fieldset class="form-section page-section">
-          <legend>Make it printable</legend>
+          <legend class="visually-hidden">Make it printable</legend>
+          <div class="section-heading">Make it printable</div>
           <div class="fields">
             <div class="font-field">
               <span class="field-label">Pick a typeface</span>
@@ -81,14 +83,15 @@
             <label class="option-toggle"><input name="includePunctuation" type="checkbox" checked> Include punctuation
               <small>Add useful sentence marks such as periods, quotes, question marks, and dashes.</small>
             </label>
-            <label class="option-toggle"><input name="includeStems" type="checkbox"> Split common word endings
-              <small>Turn safe forms such as “walked” into “walk” and “-ed” when both pieces are useful words.</small>
+            <label class="option-toggle"><input name="includeStems" type="checkbox"> Split common inflected forms
+              <small>Turn forms such as “walked” into “walk” and “-ed” only when the root is also a real word in this word list.</small>
             </label>
           </div>
         </fieldset>
 
         <fieldset class="form-section export-section">
-          <legend>Make your bag</legend>
+          <legend class="visually-hidden">Make your bag</legend>
+          <div class="section-heading">Make your bag</div>
           <div class="fields export-fields">
             <label>Save as
               <select name="format"><option value="pdf">PDF</option><option value="html">Printable HTML</option><option value="typst">Typst source</option><option value="txt">Plain text</option></select>
