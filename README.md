@@ -16,11 +16,11 @@ wasm-bindgen --target web --out-dir web/pkg target/wasm32-unknown-unknown/releas
 python3 -m http.server --directory web 8000
 ```
 
-Open `http://localhost:8000`. Choose the corpus, deck parameters, and an export. TXT, HTML, and Typst source download directly. PDF uses the Typst.ts browser/WASM compiler and falls back to Typst source if it cannot load.
+Open `http://localhost:8000`. Choose the corpus, deck parameters, paper size (Letter, A3, A4, or A5), orientation, and an export. TXT, HTML, and Typst source download directly. The HTML export measures the selected browser font and packs sorted cards into full-height, width-fitting columns. PDF uses the Typst.ts browser/WASM compiler; a compiler failure is reported without downloading a different format.
 
 ## Browser smoke test
 
 1. Generate a seeded TXT deck and verify it contains the requested number of lines.
-2. Generate HTML and open/print it; cards must use nonbreaking text and 1.5 line spacing.
+2. Generate HTML and open/print it; cards must be sorted by measured width and packed into 1.5-line-spaced, full-height columns for the selected paper.
 3. Generate Typst and compile it with local Typst if desired.
-4. Generate PDF with network access; if Typst.ts fails to load, confirm the `.typ` fallback downloads.
+4. Generate PDF with network access; confirm a PDF downloads. If Typst.ts fails to load, confirm an error is shown and no `.typ` file downloads.

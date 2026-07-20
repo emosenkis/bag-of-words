@@ -10,6 +10,8 @@ test("builds a typed generation request from form values", () => {
       paletteSize: "700",
       requiredHead: "200",
       seed: "20260717",
+      paperSize: "a4",
+      orientation: "landscape",
       format: "typst",
     }),
     {
@@ -18,6 +20,8 @@ test("builds a typed generation request from form values", () => {
       palette_size: 700,
       required_head: 200,
       seed: 20260717,
+      paper_size: "a4",
+      orientation: "landscape",
       format: "typst",
     },
   );

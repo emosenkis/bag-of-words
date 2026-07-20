@@ -5,6 +5,8 @@ export function requestFromValues(values) {
     palette_size: Number(values.paletteSize),
     required_head: Number(values.requiredHead),
     seed: Number(values.seed),
+    paper_size: values.paperSize,
+    orientation: values.orientation,
     format: values.format,
   };
 }

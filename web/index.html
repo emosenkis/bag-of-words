@@ -16,6 +16,8 @@
         <label>Palette types <input name="paletteSize" type="number" min="50" value="700"></label>
         <label>Required common words <input name="requiredHead" type="number" min="0" value="200"></label>
         <label>Seed <input name="seed" type="number" value="20260717"></label>
+        <label>Paper <select name="paperSize"><option value="letter">Letter</option><option value="a3">A3</option><option value="a4" selected>A4</option><option value="a5">A5</option></select></label>
+        <label>Orientation <select name="orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></label>
         <label>Export <select name="format"><option value="pdf">PDF via Typst</option><option value="html">Printable HTML</option><option value="typst">Typst source</option><option value="txt">Plain text</option></select></label>
         <button type="submit">Generate download</button>
       </form>

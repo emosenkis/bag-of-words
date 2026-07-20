@@ -78,7 +78,19 @@ struct GenerationRequest {
     palette_size: usize,
     required_head: usize,
     seed: u64,
+    #[serde(default = "default_paper_size")]
+    paper_size: String,
+    #[serde(default = "default_orientation")]
+    orientation: String,
     format: String,
+}
+
+fn default_paper_size() -> String {
+    "letter".to_owned()
+}
+
+fn default_orientation() -> String {
+    "portrait".to_owned()
 }
 
 #[derive(Debug, Serialize)]
@@ -111,8 +123,8 @@ pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
     )?;
     let content = match request.format.as_str() {
         "txt" => render_text(&cards),
-        "html" => render_html(&cards),
-        "typst" => render_typst(&cards),
+        "html" => render_html_for_page(&cards, &request.paper_size, &request.orientation)?,
+        "typst" => render_typst_for_page(&cards, &request.paper_size, &request.orientation)?,
         _ => return Err(format!("unknown export format: {}", request.format)),
     };
     Ok(GenerationResponse {
@@ -198,36 +210,119 @@ pub fn render_text(cards: &[String]) -> String {
 }
 
 pub fn render_html(cards: &[String]) -> String {
-    let cards = cards
-        .iter()
-        .map(|card| format!("<span class=\"card\">{}</span>", escape_html(card)))
-        .collect::<Vec<_>>()
-        .join("\n");
-    format!(
-        "<!doctype html><html><head><meta charset=\"utf-8\"><style>\
-         @page {{ margin: 4mm; }} body {{ font: 14pt sans-serif; }} .deck {{ columns: 8; gap: 3mm; }}\
-         .card {{ display: block; white-space: nowrap; line-height: 1.5; text-align: center; }}\
-         </style></head><body><main class=\"deck\">{cards}</main></body></html>"
-    )
+    render_html_for_page(cards, "letter", "portrait").expect("default paper is valid")
+}
+
+pub fn render_html_for_page(
+    cards: &[String],
+    paper_size: &str,
+    orientation: &str,
+) -> Result<String, String> {
+    let (width_mm, height_mm, css_paper) = page_spec(paper_size, orientation)?;
+    let cards_json = serde_json::to_string(cards)
+        .map_err(|error| format!("could not serialize cards for HTML: {error}"))?
+        .replace("</", "<\\/");
+    Ok(r##"<!doctype html>
+<html><head><meta charset="utf-8"><title>Word deck</title><style>
+@page { size: __PAPER__ __ORIENTATION__; margin: 4mm; }
+html, body { margin: 0; padding: 0; }
+body { font: 14pt sans-serif; }
+#deck { display: block; }
+.page { box-sizing: border-box; display: flex; gap: 3mm; overflow: hidden; page-break-after: always; break-after: page; }
+.column { box-sizing: border-box; flex: none; }
+.card { display: block; line-height: 1.5; text-align: center; white-space: nowrap; }
+@media screen { body { background: #eee; } .page { background: white; margin: 8mm auto; } }
+</style></head><body><main id="deck"></main><script>
+const cards = __CARDS__;
+const page = { widthMm: __WIDTH__, heightMm: __HEIGHT__, marginMm: 4, gapMm: 3 };
+const deck = document.querySelector("#deck");
+
+function buildLayout() {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!(context instanceof CanvasRenderingContext2D)) throw new Error("Canvas text measurement is unavailable.");
+  const style = getComputedStyle(document.body);
+  context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  const pxPerMm = 96 / 25.4;
+  const lineHeight = parseFloat(style.fontSize) * 1.5;
+  const rows = Math.max(1, Math.floor(((page.heightMm - 2 * page.marginMm) * pxPerMm) / lineHeight));
+  const usableWidth = (page.widthMm - 2 * page.marginMm) * pxPerMm;
+  const gap = page.gapMm * pxPerMm;
+  const horizontalPadding = 3 * pxPerMm;
+  const measured = cards.map((word) => ({ word, width: context.measureText(word).width + horizontalPadding }));
+  measured.sort((left, right) => left.width - right.width || left.word.localeCompare(right.word));
+
+  let cursor = 0;
+  while (cursor < measured.length) {
+    const pageElement = document.createElement("section");
+    pageElement.className = "page";
+    pageElement.style.width = `${page.widthMm - 2 * page.marginMm}mm`;
+    pageElement.style.height = `${page.heightMm - 2 * page.marginMm}mm`;
+    let usedWidth = 0;
+    while (cursor < measured.length) {
+      const columnCards = measured.slice(cursor, cursor + rows);
+      const columnWidth = Math.max(...columnCards.map((card) => card.width));
+      const nextWidth = usedWidth === 0 ? columnWidth : usedWidth + gap + columnWidth;
+      if (usedWidth > 0 && nextWidth > usableWidth) break;
+      const column = document.createElement("div");
+      column.className = "column";
+      column.style.width = `${columnWidth}px`;
+      for (const card of columnCards) {
+        const element = document.createElement("span");
+        element.className = "card";
+        element.textContent = card.word;
+        column.append(element);
+      }
+      pageElement.append(column);
+      usedWidth = nextWidth;
+      cursor += columnCards.length;
+    }
+    deck.append(pageElement);
+  }
+}
+
+document.fonts.ready.then(buildLayout).catch((error) => { deck.textContent = `Could not lay out deck: ${error.message}`; });
+</script></body></html>"##
+        .replace("__PAPER__", css_paper)
+        .replace("__ORIENTATION__", orientation)
+        .replace("__WIDTH__", &width_mm.to_string())
+        .replace("__HEIGHT__", &height_mm.to_string())
+        .replace("__CARDS__", &cards_json))
 }
 
 pub fn render_typst(cards: &[String]) -> String {
+    render_typst_for_page(cards, "letter", "portrait").expect("default paper is valid")
+}
+
+pub fn render_typst_for_page(
+    cards: &[String],
+    paper_size: &str,
+    orientation: &str,
+) -> Result<String, String> {
+    let (width_mm, height_mm, _) = page_spec(paper_size, orientation)?;
     let rows = cards
         .iter()
         .map(|card| format!("  #box[{}]", escape_typst(card)))
         .collect::<Vec<_>>()
         .join(",\n");
-    format!(
-        "#set page(margin: 4mm)\n#set text(size: 14pt)\n#table(\n  columns: 8,\n  stroke: none,\n  inset: (x: 1.5mm, y: 2.4mm),\n{rows},\n)\n"
-    )
+    Ok(format!(
+        "#set page(width: {width_mm}mm, height: {height_mm}mm, margin: 4mm)\n#set text(size: 14pt)\n#table(\n  columns: 8,\n  stroke: none,\n  inset: (x: 1.5mm, y: 2.4mm),\n{rows},\n)\n"
+    ))
 }
 
-fn escape_html(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
+fn page_spec(paper_size: &str, orientation: &str) -> Result<(f64, f64, &'static str), String> {
+    let (width, height, css_paper) = match paper_size {
+        "letter" => (215.9, 279.4, "letter"),
+        "a3" => (297.0, 420.0, "A3"),
+        "a4" => (210.0, 297.0, "A4"),
+        "a5" => (148.0, 210.0, "A5"),
+        _ => return Err(format!("unknown paper size: {paper_size}")),
+    };
+    match orientation {
+        "portrait" => Ok((width, height, css_paper)),
+        "landscape" => Ok((height, width, css_paper)),
+        _ => Err(format!("unknown orientation: {orientation}")),
+    }
 }
 
 fn escape_typst(value: &str) -> String {
