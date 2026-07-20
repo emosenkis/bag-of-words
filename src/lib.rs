@@ -302,7 +302,7 @@ pub fn render_typst_for_page(
     let (width_mm, height_mm, _) = page_spec(paper_size, orientation)?;
     let rows = cards
         .iter()
-        .map(|card| format!("  #box[{}]", escape_typst(card)))
+        .map(|card| format!("  box[{}]", escape_typst(card)))
         .collect::<Vec<_>>()
         .join(",\n");
     Ok(format!(
