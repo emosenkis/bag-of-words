@@ -78,6 +78,8 @@ struct GenerationRequest {
     palette_size: usize,
     required_head: usize,
     seed: u64,
+    #[serde(default = "default_font_size")]
+    font_size: f64,
     #[serde(default = "default_paper_size")]
     paper_size: String,
     #[serde(default = "default_orientation")]
@@ -91,6 +93,10 @@ fn default_paper_size() -> String {
 
 fn default_orientation() -> String {
     "portrait".to_owned()
+}
+
+fn default_font_size() -> f64 {
+    14.0
 }
 
 #[derive(Debug, Serialize)]
@@ -111,6 +117,7 @@ pub fn embedded_corpus(name: &str) -> Result<Corpus, String> {
 pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
     let request: GenerationRequest = serde_json::from_str(request_json)
         .map_err(|error| format!("invalid request JSON: {error}"))?;
+    validate_font_size(request.font_size)?;
     let corpus = embedded_corpus(&request.corpus)?;
     let cards = generate_deck(
         &corpus,
@@ -123,8 +130,18 @@ pub fn generate_json(request_json: &str) -> Result<GenerationResponse, String> {
     )?;
     let content = match request.format.as_str() {
         "txt" => render_text(&cards),
-        "html" => render_html_for_page(&cards, &request.paper_size, &request.orientation)?,
-        "typst" => render_typst_for_page(&cards, &request.paper_size, &request.orientation)?,
+        "html" => render_html_for_page_with_font(
+            &cards,
+            &request.paper_size,
+            &request.orientation,
+            request.font_size,
+        )?,
+        "typst" => render_typst_for_page_with_font(
+            &cards,
+            &request.paper_size,
+            &request.orientation,
+            request.font_size,
+        )?,
         _ => return Err(format!("unknown export format: {}", request.format)),
     };
     Ok(GenerationResponse {
@@ -218,6 +235,16 @@ pub fn render_html_for_page(
     paper_size: &str,
     orientation: &str,
 ) -> Result<String, String> {
+    render_html_for_page_with_font(cards, paper_size, orientation, 14.0)
+}
+
+pub fn render_html_for_page_with_font(
+    cards: &[String],
+    paper_size: &str,
+    orientation: &str,
+    font_size: f64,
+) -> Result<String, String> {
+    validate_font_size(font_size)?;
     let (width_mm, height_mm, css_paper) = page_spec(paper_size, orientation)?;
     let cards_json = serde_json::to_string(cards)
         .map_err(|error| format!("could not serialize cards for HTML: {error}"))?
@@ -226,7 +253,7 @@ pub fn render_html_for_page(
 <html><head><meta charset="utf-8"><title>Word deck</title><style>
 @page { size: __PAPER__ __ORIENTATION__; margin: 4mm; }
 html, body { margin: 0; padding: 0; }
-body { font: 14pt sans-serif; }
+body { font: __FONT_SIZE__pt sans-serif; }
 #deck { display: block; }
 .page { box-sizing: border-box; display: flex; gap: 3mm; overflow: hidden; page-break-after: always; break-after: page; }
 .column { box-sizing: border-box; flex: none; }
@@ -287,6 +314,7 @@ document.fonts.ready.then(buildLayout).catch((error) => { deck.textContent = `Co
         .replace("__ORIENTATION__", orientation)
         .replace("__WIDTH__", &width_mm.to_string())
         .replace("__HEIGHT__", &height_mm.to_string())
+        .replace("__FONT_SIZE__", &font_size.to_string())
         .replace("__CARDS__", &cards_json))
 }
 
@@ -299,6 +327,16 @@ pub fn render_typst_for_page(
     paper_size: &str,
     orientation: &str,
 ) -> Result<String, String> {
+    render_typst_for_page_with_font(cards, paper_size, orientation, 14.0)
+}
+
+pub fn render_typst_for_page_with_font(
+    cards: &[String],
+    paper_size: &str,
+    orientation: &str,
+    font_size: f64,
+) -> Result<String, String> {
+    validate_font_size(font_size)?;
     let (width_mm, height_mm, _) = page_spec(paper_size, orientation)?;
     let sampled = cards
         .iter()
@@ -306,9 +344,10 @@ pub fn render_typst_for_page(
         .collect::<Vec<_>>()
         .join(",\n");
     let printable_width = width_mm - 8.0;
+    let printable_height = height_mm - 8.0;
     Ok(
         r##"#set page(width: __PAGE_WIDTH__mm, height: __PAGE_HEIGHT__mm, margin: 4mm)
-#set text(font: "Libertinus Serif", size: 14pt)
+#set text(font: "Libertinus Serif", size: __FONT_SIZE__pt)
 #set par(leading: 0.5em)
 #set table(stroke: none, inset: (x: 1.5mm, y: 2.4mm), align: center + horizon)
 
@@ -317,9 +356,11 @@ __SAMPLED__,
 )
 #context {
   let words = sampled.sorted().sorted(key: word => measure(text(word)).width)
-  let rows-per-column = 35
   let cell-inset = 3mm
   let printable-width = __PRINTABLE_WIDTH__mm
+  let printable-height = __PRINTABLE_HEIGHT__mm
+  let row-height = measure(box(inset: (y: 2.4mm))[Ag]).height
+  let rows-per-column = calc.floor(printable-height / row-height)
   let column-width(column) = {
     let widest = 0pt
     for word in column { widest = calc.max(widest, measure(text(word)).width) }
@@ -362,8 +403,17 @@ __SAMPLED__,
         .replace("__PAGE_WIDTH__", &width_mm.to_string())
         .replace("__PAGE_HEIGHT__", &height_mm.to_string())
         .replace("__PRINTABLE_WIDTH__", &printable_width.to_string())
+        .replace("__PRINTABLE_HEIGHT__", &printable_height.to_string())
+        .replace("__FONT_SIZE__", &font_size.to_string())
         .replace("__SAMPLED__", &sampled),
     )
+}
+
+fn validate_font_size(font_size: f64) -> Result<(), String> {
+    if !font_size.is_finite() || !(6.0..=36.0).contains(&font_size) {
+        return Err("font_size must be between 6 and 36 points".to_owned());
+    }
+    Ok(())
 }
 
 fn page_spec(paper_size: &str, orientation: &str) -> Result<(f64, f64, &'static str), String> {
