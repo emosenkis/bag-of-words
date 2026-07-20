@@ -32,7 +32,8 @@ fn typst_export_escapes_quotes_and_uses_cutout_layout() {
     let typst = render_typst(&["don't".into(), "say \"go\"".into()]);
 
     assert!(typst.contains("say \\\"go\\\""));
-    assert!(typst.contains("box["));
-    assert!(!typst.contains("#box["));
+    assert!(typst.contains("words.sorted(key: word => (measure(text(word)).width, word))"));
+    assert!(typst.contains("col * row_count + row"));
+    assert!(typst.contains("box[#sorted.at(index)]"));
     assert!(typst.contains("stroke: none"));
 }

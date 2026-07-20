@@ -300,13 +300,13 @@ pub fn render_typst_for_page(
     orientation: &str,
 ) -> Result<String, String> {
     let (width_mm, height_mm, _) = page_spec(paper_size, orientation)?;
-    let rows = cards
+    let words = cards
         .iter()
-        .map(|card| format!("  box[{}]", escape_typst(card)))
+        .map(|card| format!("  \"{}\"", escape_typst(card)))
         .collect::<Vec<_>>()
         .join(",\n");
     Ok(format!(
-        "#set page(width: {width_mm}mm, height: {height_mm}mm, margin: 4mm)\n#set text(size: 14pt)\n#table(\n  columns: 8,\n  stroke: none,\n  inset: (x: 1.5mm, y: 2.4mm),\n{rows},\n)\n"
+        "#set page(width: {width_mm}mm, height: {height_mm}mm, margin: 4mm)\n#set text(size: 14pt)\n#let words = (\n{words},\n)\n#context {{\n  let sorted = words.sorted(key: word => (measure(text(word)).width, word))\n  let column_count = 8\n  let row_count = calc.ceil(sorted.len() / column_count)\n  let cells = range(0, row_count).map(row => range(0, column_count).map(col => {{\n    let index = col * row_count + row\n    if index < sorted.len() {{ box[#sorted.at(index)] }} else {{ none }}\n  }})).flatten()\n  table(\n    columns: column_count,\n    stroke: none,\n    inset: (x: 1.5mm, y: 2.4mm),\n    ..cells,\n  )\n}}\n"
     ))
 }
 
