@@ -23,6 +23,13 @@
       </form>
       <output id="status" aria-live="polite">Loading word-deck WASM…</output>
     </main>
+    <script type="importmap">
+      {
+        "imports": {
+          "@myriaddreamin/typst-ts-web-compiler": "https://unpkg.com/@myriaddreamin/typst-ts-web-compiler@0.7.0/pkg/wasm-pack-shim.mjs"
+        }
+      }
+    </script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

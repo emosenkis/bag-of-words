@@ -1,6 +1,7 @@
 import init, { generate } from "./pkg/word_deck.js";
 import { compilePdf } from "./pdf.js";
 import { requestFromValues } from "./request.js";
+import { compileWithTypst } from "./typst-loader.js";
 
 const form = document.querySelector("#generator");
 const status = document.querySelector("#status");
@@ -14,11 +15,7 @@ function download(content, filename, mime) {
 }
 
 async function exportPdf(typst) {
-  return compilePdf(typst, async (source) => {
-    const { $typst } = await import("https://esm.sh/@myriaddreamin/typst.ts@0.7.0?conditions=browser");
-    const pdf = await $typst.pdf({ mainContent: source });
-    return pdf;
-  }, download);
+  return compilePdf(typst, compileWithTypst, download);
 }
 
 await init();
