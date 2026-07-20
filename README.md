@@ -1,6 +1,6 @@
 # Bag of Words
 
-[Bag of Words](https://emosenkis.github.io/bag-of-words/) is a fully static, browser-run tool for making printable decks of story-building words. Pick a frequency source, choose a repeatable random seed and deck size, tune the page layout, then generate a PDF, printable HTML, Typst source, or plain-text list.
+[Bag of Words](https://emosenkis.github.io/bag-of-words/) is a fully static, browser-run tool for making printable decks of story-building words. Pick a frequency source and deck size, tune the page layout, then generate a PDF, printable HTML, Typst source, or plain-text list.
 
 The application is deliberately built around word-frequency data, not source prose. It does not embed or send the underlying texts; generation takes place locally in the browser.
 
